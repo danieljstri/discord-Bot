@@ -1,19 +1,29 @@
 import requests
+import json
+from datetime import datetime, timedelta
+from keys import access_token
 
 
-url = 'https://api.mangadex.org/manga'
-params = {'title': 'One Piece'}
+def get_new_chapters(manga_id):
+    # URL da API MangaDex para capítulos
+    url = 'https://api.mangadex.org/chapter'
 
-response = requests.get(url, params=params)
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
 
-if response.status_code == 200:
-    data = response.json()
-    data1 = data['data']
-    lendata = len(data1)
-    for i in range (lendata):
-        data_json = data1[i]
-        title = data_json['attributes']['title']['en']
-        print('Title:', title)
+    # Parâmetros para a requisição
+    params = {
+        'manga': manga_id,
+        'translatedLanguage[]': ['pt-br', 'en'],
+        'order[publishAt]': 'desc',
+    }
 
-else:
-    print('Erro:', response.status_code)
+    response = requests.get(url, headers=headers, params=params)
+    jsonresponse = response.json()
+
+    date_published = jsonresponse['data'][0]['attributes']['publishAt'].split('T')[0]
+    date_today = datetime.now().isoformat().split('T')[0]
+    chapter_url = f'https://mangadex.org/chapter/{jsonresponse["data"][0]["id"]}'
+
+    return {'have_new': date_published == date_today, 'chapter_url': chapter_url}

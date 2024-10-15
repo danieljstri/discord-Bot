@@ -2,6 +2,7 @@
 from keys import BOT_TOKEN, channel_id
 import discord
 import sqlite3
+from api import get_new_chapters
 
 from discord.ext import tasks
 
@@ -56,17 +57,16 @@ class MyClient(discord.Client):
             conn.commit()
             await message.channel.send(f'O mangá {manga_name} foi removido, {message.author.mention}!')
     
-    @tasks.loop(minutes=30)
-    async def checking(self):
-        await self.wait_until_ready()
-        channel = self.get_channel(channel_id)
-        if channel:
-            await channel.send('esse código acontece a cada 30 segundos')
-    
+    @tasks.loop(seconds=30)
+    async def checking_chapter(self):
+        manga = get_new_chapters('7889434b-d9a5-454c-8ea1-8c7a4509fc51')
+        if manga['have_new']:
+            channel = self.get_channel(channel_id)
+            await channel.send(f'Novo capítulo lançado! {manga["chapter_url"]}')
     async def on_ready(self):
         print(f'Logged in as {self.user} (ID: {self.user.id})')
         print('------')
-        self.checking.start()
+        self.checking_chapter.start()
 
 intents = discord.Intents.default()
 intents.message_content = True
