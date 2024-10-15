@@ -1,45 +1,23 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
+import axios from 'axios';
+const title = 'One Piece';
 
-// Função para buscar os capítulos de um mangá no MangaFox
-async function getMangaChapters(mangaSlug) {
-    try {
-        // Faz uma requisição GET para a página do mangá no MangaFox
-        const response = await axios.get(`https://mangafox.site/manga/${mangaSlug}`);
-        
-        // Carrega o HTML retornado
-        const $ = cheerio.load(response.data);
-        
-        // Array para armazenar os capítulos
-        const chapters = [];
-        
-        // Encontra todos os elementos <a> com a classe "chapter-link"
-        $('a.chapter-link').each((index, element) => {
-            // Extrai o título e a URL do capítulo
-            const title = $(element).text().trim();
-            const url = $(element).attr('href');
-            
-            // Adiciona o capítulo ao array
-            chapters.push({ title, url });
-        });
-        
-        // Retorna a lista de capítulos
-        return chapters;
-    } catch (error) {
-        console.error('Erro ao buscar capítulos:', error);
-        return [];
+const baseUrl = 'https://api.mangadex.org';
+
+const resp = await axios({
+    method: 'GET',
+    url: `${baseUrl}/manga`,
+    params: {
+        title: title
     }
-}
+});
+const manga_ids = resp.data.data.map(manga => manga.id);
 
-// Exemplo de uso
-const mangaSlug = 'kingdom'; // Substitua pelo slug do mangá desejado
-getMangaChapters(mangaSlug)
-    .then(chapters => {
-        console.log('Capítulos encontrados:');
-        chapters.forEach(chapter => {
-            console.log(`${chapter.title}: ${chapter.url}`);
-        });
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-    });
+const resp_chapters = await axios({
+    method: 'GET',
+    url: `${baseUrl}/chapter`,
+    params: {
+        id: manga_ids[0]
+    }
+});
+
+console.log(resp_chapters.data.data.map(chapter => chapter.attributes.chapter));
