@@ -2,19 +2,20 @@
 from keys import BOT_TOKEN, channel_id
 import discord
 import sqlite3
-from api import get_new_chapters
+from utils import get_new_chapters, get_manga, escolhe_manga
 
 from discord.ext import tasks
 
 # Conectar ao banco de dados SQLite3
-conn = sqlite3.connect('mangas.db')
+conn = sqlite3.connect('database.db')
 cursor = conn.cursor()
 
 # Criar a tabela de mangás se não existir
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS mangas (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL
+    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+    username TEXT NOT NULL,
+    manga_id TEXT NOT NULL
 )
 ''')
 conn.commit()
@@ -38,12 +39,21 @@ class MyClient(discord.Client):
         
         if message.content.startswith('$add'):
             manga_name = message.content[len('$add '):].strip()
-            cursor.execute('INSERT INTO mangas (name) VALUES (?)', (manga_name,))
+            response = escolhe_manga(manga_name)
+            await message.channel.send(response)
+            manga_number = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit())
+            manga_number = int(manga_number.content)
+            manga_id = get_manga(manga_name)[manga_number]['id']
+            username = message.author.name
+            cursor.execute('INSERT INTO mangas (username, manga_id) VALUES (?, ?)', (username, manga_id))
             conn.commit()
             await message.channel.send(f'O mangá {manga_name} foi adicionado, {message.author.mention}!')
-        
+
+        if message.content.startswith('$nigga'):
+            await message.channel.send('nigga moooove')
+
         if message.content.startswith('$list'):
-            cursor.execute('SELECT name FROM mangas')
+            cursor.execute('SELECT username FROM mangas')
             mangas = cursor.fetchall()
             if mangas:
                 manga_list = '\n'.join([manga[0] for manga in mangas])
@@ -57,7 +67,7 @@ class MyClient(discord.Client):
             conn.commit()
             await message.channel.send(f'O mangá {manga_name} foi removido, {message.author.mention}!')
     
-    @tasks.loop(seconds=30)
+    @tasks.loop(hours=1)
     async def checking_chapter(self):
         manga = get_new_chapters('7889434b-d9a5-454c-8ea1-8c7a4509fc51')
         if manga['have_new']:

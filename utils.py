@@ -27,3 +27,26 @@ def get_new_chapters(manga_id):
     chapter_url = f'https://mangadex.org/chapter/{jsonresponse["data"][0]["id"]}'
 
     return {'have_new': date_published == date_today, 'chapter_url': chapter_url}
+
+def get_manga(manga_name):
+    url = 'https://api.mangadex.org/manga'
+
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
+
+    params = {
+        'title': manga_name,
+    }
+
+    response = requests.get(url, headers=headers, params=params)   
+    jsonresponse = response.json()
+    return jsonresponse['data']
+
+def escolhe_manga(manga_name):
+    mangas = get_manga(manga_name)
+    message = f'''Escolha o mangá que deseja adicionar:\n'''
+    for index in range(len(mangas)):
+        message += f'[{index}] - {mangas[index]['attributes']['title']['en']}\n'
+    
+    return message
