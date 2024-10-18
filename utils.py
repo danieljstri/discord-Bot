@@ -1,6 +1,6 @@
 import requests
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from keys import access_token
 
 
@@ -21,6 +21,8 @@ def get_new_chapters(manga_id):
 
     response = requests.get(url, headers=headers, params=params)
     jsonresponse = response.json()
+    with open('response.json', 'w') as f:
+        json.dump(jsonresponse, f)
 
     date_published = jsonresponse['data'][0]['attributes']['publishAt'].split('T')[0]
     date_today = datetime.now().isoformat().split('T')[0]

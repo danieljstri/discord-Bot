@@ -15,6 +15,7 @@ cursor.execute('''
 CREATE TABLE IF NOT EXISTS mangas (
     id INTEGER PRIMARY KEY AUTOINCREMENT, 
     username TEXT NOT NULL,
+    manga_name TEXT NOT NULL,
     manga_id TEXT NOT NULL
 )
 ''')
@@ -28,24 +29,19 @@ class MyClient(discord.Client):
         if message.content.startswith('$hello'):
             await message.channel.send(f'oi, {message.author.mention}')
         
-        if message.content.startswith('$image'):
-            embed = discord.Embed(
-            title="meu embed",
-            description=f"{message.author.mention}, veja o beniyasha",
-            color=discord.Color.blue()
-            )
-            embed.set_image(url="https://s4.anilist.co/file/anilistcdn/character/large/61407.jpg")
-            await message.channel.send(embed=embed)
+        if message.content.startswith('$help'):
+            await message.channel.send('''Comandos disponíveis:\n$hello - O bot te dá oi :)\n$add - Adiciona um mangá à sua lista\n$list - Lista todos os mangás que você adicionou\n$remove - Remove um mangá da sua lista\n$help - Mostra todos os comandos disponíveis''')
         
         if message.content.startswith('$add'):
-            manga_name = message.content[len('$add '):].strip()
-            response = escolhe_manga(manga_name)
+            user_manga = message.content[len('$add '):].strip()
+            response = escolhe_manga(user_manga)
             await message.channel.send(response)
-            manga_number = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit())
-            manga_number = int(manga_number.content)
-            manga_id = get_manga(manga_name)[manga_number]['id']
+            user_manga_number = await self.wait_for('message', check=lambda m: m.author == message.author and m.content.isdigit())
+            user_manga_number = int(user_manga_number.content)
+            manga_name = get_manga(user_manga)[user_manga_number]['attributes']['title']['en']
+            manga_id = str(get_manga(user_manga)[user_manga_number]['id'])
             username = message.author.name
-            cursor.execute('INSERT INTO mangas (username, manga_id) VALUES (?, ?)', (username, manga_id))
+            cursor.execute('INSERT INTO mangas (username, manga_name, manga_id) VALUES (?, ?, ?)', (username, manga_name, manga_id))
             conn.commit()
             await message.channel.send(f'O mangá {manga_name} foi adicionado, {message.author.mention}!')
 
@@ -53,26 +49,35 @@ class MyClient(discord.Client):
             await message.channel.send('nigga moooove')
 
         if message.content.startswith('$list'):
-            cursor.execute('SELECT username FROM mangas')
+            username = message.author.name
+            cursor.execute('SELECT * FROM mangas WHERE username = ?', (username,))
             mangas = cursor.fetchall()
+            print(mangas)
             if mangas:
-                manga_list = '\n'.join([manga[0] for manga in mangas])
-                await message.channel.send(f'Lista de mangás:\n{manga_list}')
+                manga_list = '\n'.join([manga[2] for manga in mangas])
+                await message.channel.send(f'Lista de mangás:\n {manga_list}')
             else:
                 await message.channel.send('Nenhum mangá encontrado.')
         
         if message.content.startswith('$remove'):
             manga_name = message.content[len('$remove '):].strip()
-            cursor.execute('DELETE FROM mangas WHERE name = ?', (manga_name,))
+            cursor.execute('DELETE FROM mangas WHERE manga_name = ?', (manga_name,))
             conn.commit()
             await message.channel.send(f'O mangá {manga_name} foi removido, {message.author.mention}!')
     
-    @tasks.loop(hours=1)
+    @tasks.loop(hours=12)
     async def checking_chapter(self):
-        manga = get_new_chapters('7889434b-d9a5-454c-8ea1-8c7a4509fc51')
-        if manga['have_new']:
-            channel = self.get_channel(channel_id)
-            await channel.send(f'Novo capítulo lançado! {manga["chapter_url"]}')
+        cursor.execute('SELECT * FROM mangas')
+        ids = cursor.fetchall() 
+        for item in ids:
+            print(item[3])
+            manga = get_new_chapters(item[3].strip())
+            if manga['have_new']:
+                channel = self.get_channel(channel_id)
+                await channel.send(f'Novo capítulo lançado! {manga["chapter_url"]}')
+            else:
+                channel = self.get_channel(channel_id)
+                await channel.send(f'Nenhum novo capítulo de {item[2]} lançado.')
     async def on_ready(self):
         print(f'Logged in as {self.user} (ID: {self.user.id})')
         print('------')
