@@ -1,7 +1,7 @@
 import requests
 import json
 from datetime import datetime
-from keys import access_token
+# from keys import access_token
 
 
 def get_new_chapters(manga_id):
