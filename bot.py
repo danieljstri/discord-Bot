@@ -45,9 +45,6 @@ class MyClient(discord.Client):
             conn.commit()
             await message.channel.send(f'O mangá {manga_name} foi adicionado, {message.author.mention}!')
 
-        if message.content.startswith('$nigga'):
-            await message.channel.send('nigga moooove')
-
         if message.content.startswith('$list'):
             username = message.author.name
             cursor.execute('SELECT * FROM mangas WHERE username = ?', (username,))
